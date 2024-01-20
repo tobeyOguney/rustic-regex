@@ -1,14 +1,12 @@
-pub fn add(left: usize, right: usize) -> usize {
-    left + right
-}
+pub mod regexp_parser;
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::regexp_parser::parse_regex_into_expression;
+
 
     #[test]
-    fn it_works() {
-        let result = add(2, 2);
-        assert_eq!(result, 4);
+    fn can_parse_regex_into_expression() {
+        println!("{}", parse_regex_into_expression("a|b").unwrap());
     }
 }
