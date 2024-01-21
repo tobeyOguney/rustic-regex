@@ -5,7 +5,7 @@ fn get_expression_for_empty() -> Result<String, String> {
 }
 
 fn get_expression_for_literal(literal: &ast::Literal) -> Result<String, String> {
-    Ok(format!("literal(\"{}\")", literal.c))
+    Ok(format!("\"{}\"", literal.c))
 }
 
 fn get_expression_for_repetition(repetition: &ast::Repetition) -> Result<String, String> {
@@ -285,7 +285,7 @@ fn get_expression_for_class_set(class_set: &ast::ClassSet) -> Result<String, Str
                 Ok(get_expression_for_literal(literal)?)
             }
             ast::ClassSetItem::Range(range) => {
-                Ok(format!("literals_between(\"{}\", \"{}\")", range.start.c, range.end.c))
+                Ok(format!("literals_between('{}', '{}')", range.start.c, range.end.c))
             }
             ast::ClassSetItem::Ascii(ascii) => {
                 Ok(get_expression_for_ascii(ascii)?)
@@ -327,9 +327,9 @@ fn get_expression_for_class_bracketed(
     class_bracketed: &ast::ClassBracketed,
 ) -> Result<String, String> {
     if class_bracketed.negated {
-        Ok(format!("is_not({})", get_expression_for_class_set(&class_bracketed.kind)?))
+        Ok(format!("negated_bracket({})", get_expression_for_class_set(&class_bracketed.kind)?))
     } else {
-        Ok(format!("is({})", get_expression_for_class_set(&class_bracketed.kind)?))
+        Ok(format!("bracket({})", get_expression_for_class_set(&class_bracketed.kind)?))
     }
 }
 
@@ -355,8 +355,9 @@ fn get_expression_for_group(group: &ast::Group) -> Result<String, String> {
             }
         }
         ast::GroupKind::NonCapturing(flags) => Ok(format!(
-            "non_capturing_{}",
-            &get_expression_for_flags(&flags)?
+            "non_capturing_expression_with_flags({}, {})",
+            &get_expression_for_flags(&flags)?,
+            &parse_regex_tree_into_expression(&group.ast)?
         )),
     }
 }
