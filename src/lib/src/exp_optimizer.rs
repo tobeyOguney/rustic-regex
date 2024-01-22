@@ -13,7 +13,7 @@ fn remove_quote_comma_space(input: &str) -> String {
 
 fn replace_single_arg_concat_with_capture(input: &str) -> String {
     // Create a regex pattern to match content within double quotes
-    let pattern = Regex::new(r#"concatenate\(("[^,]*")\)"#).expect("Invalid regex pattern");
+    let pattern = Regex::new(r#"concatenation_of\(("[^,]*")\)"#).expect("Invalid regex pattern");
 
     // Replace all matches with the captured content
     let result = pattern.replace_all(input, |caps: &regex::Captures| {

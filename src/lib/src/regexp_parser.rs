@@ -12,30 +12,30 @@ fn get_expression_for_repetition(repetition: &ast::Repetition) -> Result<String,
     if repetition.greedy {
         match &repetition.op.kind {
             ast::RepetitionKind::ZeroOrOne => Ok(format!(
-                "zero_or_one_greedy_repetitions({})",
+                "greedy_repetitions.zero_or_one_of({})",
                 &parse_regex_tree_into_expression(&repetition.ast)?
             )),
             ast::RepetitionKind::ZeroOrMore => Ok(format!(
-                "zero_or_more_greedy_repetitions({})",
+                "greedy_repetitions.zero_or_more_of({})",
                 &parse_regex_tree_into_expression(&repetition.ast)?
             )),
             ast::RepetitionKind::OneOrMore => Ok(format!(
-                "one_or_more_greedy_repetitions({})",
+                "greedy_repetitions.one_or_more_of({})",
                 &parse_regex_tree_into_expression(&repetition.ast)?
             )),
             ast::RepetitionKind::Range(range) => match range {
                 ast::RepetitionRange::Exactly(n) => Ok(format!(
-                    "exactly_n_greedy_repetitions({}, {})",
+                    "greedy_repetitions.exactly_n_of({}, {})",
                     n,
                     &parse_regex_tree_into_expression(&repetition.ast)?
                 )),
                 ast::RepetitionRange::AtLeast(n) => Ok(format!(
-                    "at_least_n_greedy_repetitions({}, {})",
+                    "greedy_repetitions.at_least_n_of({}, {})",
                     n,
                     &parse_regex_tree_into_expression(&repetition.ast)?
                 )),
                 ast::RepetitionRange::Bounded(min, max) => Ok(format!(
-                    "bounded_greedy_repetitions({}, {}, {})",
+                    "greedy_repetitions.bounded_instances_of({}, {}, {})",
                     min,
                     max,
                     &parse_regex_tree_into_expression(&repetition.ast)?
@@ -45,30 +45,30 @@ fn get_expression_for_repetition(repetition: &ast::Repetition) -> Result<String,
     } else {
         match &repetition.op.kind {
             ast::RepetitionKind::ZeroOrOne => Ok(format!(
-                "zero_or_one_lazy_repetitions({})",
+                "lazy_repetitions.zero_or_one_of({})",
                 &parse_regex_tree_into_expression(&repetition.ast)?
             )),
             ast::RepetitionKind::ZeroOrMore => Ok(format!(
-                "zero_or_more_lazy_repetitions({})",
+                "lazy_repetitions.zero_or_more_of({})",
                 &parse_regex_tree_into_expression(&repetition.ast)?
             )),
             ast::RepetitionKind::OneOrMore => Ok(format!(
-                "one_or_more_lazy_repetitions({})",
+                "lazy_repetitions.one_or_more_of({})",
                 &parse_regex_tree_into_expression(&repetition.ast)?
             )),
             ast::RepetitionKind::Range(range) => match range {
                 ast::RepetitionRange::Exactly(n) => Ok(format!(
-                    "exactly_n_lazy_repetitions({}, {})",
+                    "lazy_repetitions.exactly_n_of({}, {})",
                     n,
                     &parse_regex_tree_into_expression(&repetition.ast)?
                 )),
                 ast::RepetitionRange::AtLeast(n) => Ok(format!(
-                    "at_least_n_lazy_repetitions({}, {})",
+                    "lazy_repetitions.exactly_n_of({}, {})",
                     n,
                     &parse_regex_tree_into_expression(&repetition.ast)?
                 )),
                 ast::RepetitionRange::Bounded(min, max) => Ok(format!(
-                    "bounded_lazy_repetitions({}, {}, {})",
+                    "lazy_repetitions.bounded_instances_of({}, {}, {})",
                     min,
                     max,
                     &parse_regex_tree_into_expression(&repetition.ast)?
@@ -85,7 +85,7 @@ fn get_expression_for_concat(node: &Box<ast::Concat>) -> Result<String, String> 
         expression.push_str(", ");
     }
     Ok(format!(
-        "concatenate({})",
+        "concatenation_of({})",
         expression.trim_end_matches(", ").to_string()
     ))
 }
@@ -107,35 +107,35 @@ fn get_expression_for_flags(flags: &ast::Flags) -> Result<String, String> {
     for flag in &flags.items {
         match flag.kind {
             ast::FlagsItemKind::Negation => {
-                expression.push_str("negate(), ");
+                expression.push_str("flag.negate(), ");
             }
             ast::FlagsItemKind::Flag(flag) => match flag {
                 ast::Flag::CaseInsensitive => {
-                    expression.push_str("be_case_insensitive(), ");
+                    expression.push_str("flag.be_case_insensitive(), ");
                 }
                 ast::Flag::MultiLine => {
-                    expression.push_str("enable_multi_line_match(), ");
+                    expression.push_str("flag.enable_multi_line_match(), ");
                 }
                 ast::Flag::DotMatchesNewLine => {
-                    expression.push_str("new_line_becomes_character(), ");
+                    expression.push_str("flag.new_line_becomes_character(), ");
                 }
                 ast::Flag::SwapGreed => {
-                    expression.push_str("swap_greed_modes(), ");
+                    expression.push_str("flag.swap_greed_modes(), ");
                 }
                 ast::Flag::Unicode => {
-                    expression.push_str("enable_unicode_chars(), ");
+                    expression.push_str("flag.enable_unicode_chars(), ");
                 }
                 ast::Flag::CRLF => {
-                    expression.push_str("enable_crlf(), ");
+                    expression.push_str("flag.enable_crlf(), ");
                 }
                 ast::Flag::IgnoreWhitespace => {
-                    expression.push_str("ignore_whitespace(), ");
+                    expression.push_str("flag.ignore_whitespace(), ");
                 }
             },
         }
     }
     Ok(format!(
-        "flag_group({})",
+        "flags({})",
         expression.trim_end_matches(", ").to_string()
     ))
 }
@@ -146,18 +146,18 @@ fn get_expression_for_dot() -> Result<String, String> {
 
 fn get_expression_for_assertion(assertion: &ast::Assertion) -> Result<String, String> {
     match &assertion.kind {
-        ast::AssertionKind::StartLine => Ok("is_start_of_line()".to_string()),
-        ast::AssertionKind::EndLine => Ok("is_end_of_line()".to_string()),
-        ast::AssertionKind::StartText => Ok("is_start_of_text()".to_string()),
-        ast::AssertionKind::EndText => Ok("is_end_of_text()".to_string()),
-        ast::AssertionKind::WordBoundary => Ok("is_word_boundary()".to_string()),
-        ast::AssertionKind::NotWordBoundary => Ok("is_not_word_boundary()".to_string()),
-        ast::AssertionKind::WordBoundaryStart => Ok("is_word_boundary_start()".to_string()),
-        ast::AssertionKind::WordBoundaryEnd => Ok("is_word_boundary_end()".to_string()),
-        ast::AssertionKind::WordBoundaryStartAngle => Ok("is_word_boundary_start_angle()".to_string()),
-        ast::AssertionKind::WordBoundaryEndAngle => Ok("is_word_boundary_end_angle()".to_string()),
-        ast::AssertionKind::WordBoundaryStartHalf => Ok("is_word_boundary_start_half()".to_string()),
-        ast::AssertionKind::WordBoundaryEndHalf => Ok("is_word_boundary_end_half()".to_string()),
+        ast::AssertionKind::StartLine => Ok("assertion.start_of_line()".to_string()),
+        ast::AssertionKind::EndLine => Ok("assertion.end_of_line()".to_string()),
+        ast::AssertionKind::StartText => Ok("assertion.start_of_text()".to_string()),
+        ast::AssertionKind::EndText => Ok("assertion.end_of_text()".to_string()),
+        ast::AssertionKind::WordBoundary => Ok("assertion.word_boundary()".to_string()),
+        ast::AssertionKind::NotWordBoundary => Ok("assertion.not_word_boundary()".to_string()),
+        ast::AssertionKind::WordBoundaryStart => Ok("assertion.start_of_word_boundary()".to_string()),
+        ast::AssertionKind::WordBoundaryEnd => Ok("assertion.end_of_word_boundary()".to_string()),
+        ast::AssertionKind::WordBoundaryStartAngle => Ok("assertion.start_angle_of_word_boundary()".to_string()),
+        ast::AssertionKind::WordBoundaryEndAngle => Ok("assertion.end_angle_of_word_boundary()".to_string()),
+        ast::AssertionKind::WordBoundaryStartHalf => Ok("assertion.start_half_of_word_boundary()".to_string()),
+        ast::AssertionKind::WordBoundaryEndHalf => Ok("assertion.end_half_of_word_boundary()".to_string()),
     }
 }
 
@@ -165,20 +165,20 @@ fn get_expression_for_class_unicode(class_unicode: &ast::ClassUnicode) -> Result
     if class_unicode.negated {
         match &class_unicode.kind {
             ast::ClassUnicodeKind::OneLetter(letter) => {
-                Ok(format!("not_this_unicode_letter(\"{}\")", letter))
+                Ok(format!("unicode_character.that_is_not_this_letter(\"{}\")", letter))
             }
-            ast::ClassUnicodeKind::Named(name) => Ok(format!("not_this_unicode_class(\"{}\")", name)),
+            ast::ClassUnicodeKind::Named(name) => Ok(format!("unicode_character.that_is_not_of_this_class(\"{}\")", name)),
             ast::ClassUnicodeKind::NamedValue { op, name, value } => match op {
                 ast::ClassUnicodeOpKind::Equal => Ok(format!(
-                    "doesnt_have_unicode_property_with_specified_value(\"{}\", \"{}\")",
+                    "unicode_character.that_does_not_have_property_with_specified_value(\"{}\", \"{}\")",
                     name, value
                 )),
                 ast::ClassUnicodeOpKind::Colon => Ok(format!(
-                    "doesnt_have_unicode_property_with_specified_value(\"{}\", \"{}\")",
+                    "unicode_character.that_does_not_have_property_with_specified_value(\"{}\", \"{}\")",
                     name, value
                 )),
                 ast::ClassUnicodeOpKind::NotEqual => Ok(format!(
-                    "doesnt_have_unicode_property_without_specified_value(\"{}\", \"{}\")",
+                    "unicode_character.that_has_property_with_specified_value(\"{}\", \"{}\")",
                     name, value
                 )),
             },
@@ -186,20 +186,20 @@ fn get_expression_for_class_unicode(class_unicode: &ast::ClassUnicode) -> Result
     } else {
         match &class_unicode.kind {
             ast::ClassUnicodeKind::OneLetter(letter) => {
-                Ok(format!("is_this_unicode_letter(\"{}\")", letter))
+                Ok(format!("unicode_character.that_is_this_letter(\"{}\")", letter))
             }
-            ast::ClassUnicodeKind::Named(name) => Ok(format!("is_this_unicode_class(\"{}\")", name)),
+            ast::ClassUnicodeKind::Named(name) => Ok(format!("unicode_character.that_is_of_this_class(\"{}\")", name)),
             ast::ClassUnicodeKind::NamedValue { op, name, value } => match op {
                 ast::ClassUnicodeOpKind::Equal => Ok(format!(
-                    "has_unicode_property_with_specified_value(\"{}\", \"{}\")",
-                    name, value
-                )),
-                ast::ClassUnicodeOpKind::NotEqual => Ok(format!(
-                    "has_unicode_property_without_specified_value(\"{}\", \"{}\")",
+                    "unicode_character.that_has_property_with_specified_value(\"{}\", \"{}\")",
                     name, value
                 )),
                 ast::ClassUnicodeOpKind::Colon => Ok(format!(
-                    "has_unicode_property_with_specified_value(\"{}\", \"{}\")",
+                    "unicode_character.that_has_property_with_specified_value(\"{}\", \"{}\")",
+                    name, value
+                )),
+                ast::ClassUnicodeOpKind::NotEqual => Ok(format!(
+                    "unicode_character.that_does_not_have_property_with_specified_value(\"{}\", \"{}\")",
                     name, value
                 )),
             },
@@ -210,15 +210,15 @@ fn get_expression_for_class_unicode(class_unicode: &ast::ClassUnicode) -> Result
 fn get_expression_for_class_perl(class_perl: &ast::ClassPerl) -> Result<String, String> {
     if class_perl.negated {
         match &class_perl.kind {
-            ast::ClassPerlKind::Digit => Ok("is_not_a_digit()".to_string()),
-            ast::ClassPerlKind::Space => Ok("is_not_whitespace()".to_string()),
-            ast::ClassPerlKind::Word => Ok("is_not_a_word()".to_string()),
+            ast::ClassPerlKind::Digit => Ok("perl_character_descriptor.not_digit()".to_string()),
+            ast::ClassPerlKind::Space => Ok("perl_character_descriptor.not_whitespace()".to_string()),
+            ast::ClassPerlKind::Word => Ok("perl_character_descriptor.not_word()".to_string()),
         }
     } else {
         match &class_perl.kind {
-            ast::ClassPerlKind::Digit => Ok("is_a_digit()".to_string()),
-            ast::ClassPerlKind::Space => Ok("is_whitespace()".to_string()),
-            ast::ClassPerlKind::Word => Ok("is_a_word()".to_string()),
+            ast::ClassPerlKind::Digit => Ok("perl_character_descriptor.digit()".to_string()),
+            ast::ClassPerlKind::Space => Ok("perl_character_descriptor.whitespace()".to_string()),
+            ast::ClassPerlKind::Word => Ok("perl_character_descriptor.word()".to_string()),
         }
     }
 }
@@ -226,37 +226,37 @@ fn get_expression_for_class_perl(class_perl: &ast::ClassPerl) -> Result<String, 
 fn get_expression_for_ascii(ascii: &ast::ClassAscii) -> Result<String, String> {
     if ascii.negated {
         match ascii.kind {
-            ast::ClassAsciiKind::Alnum => Ok("is_not_alphanumeric_ascii()".to_string()),
-            ast::ClassAsciiKind::Alpha => Ok("is_not_alphabetic_ascii()".to_string()),
-            ast::ClassAsciiKind::Ascii => Ok("is_not_ascii()".to_string()),
-            ast::ClassAsciiKind::Blank => Ok("is_not_blank_ascii()".to_string()),
-            ast::ClassAsciiKind::Cntrl => Ok("is_not_control_ascii()".to_string()),
-            ast::ClassAsciiKind::Digit => Ok("is_not_digit_ascii()".to_string()),
-            ast::ClassAsciiKind::Graph => Ok("is_not_graph_ascii()".to_string()),
-            ast::ClassAsciiKind::Lower => Ok("is_not_lowercase_ascii()".to_string()),
-            ast::ClassAsciiKind::Print => Ok("is_not_printable_ascii()".to_string()),
-            ast::ClassAsciiKind::Punct => Ok("is_not_punctuation_ascii()".to_string()),
-            ast::ClassAsciiKind::Space => Ok("is_not_whitespace_ascii()".to_string()),
-            ast::ClassAsciiKind::Upper => Ok("is_not_uppercase_ascii()".to_string()),
-            ast::ClassAsciiKind::Word => Ok("is_not_word_ascii()".to_string()),
-            ast::ClassAsciiKind::Xdigit => Ok("is_not_hex_digit_ascii()".to_string()),
+            ast::ClassAsciiKind::Alnum => Ok("ascii_character.that_is_not_alphanumeric()".to_string()),
+            ast::ClassAsciiKind::Alpha => Ok("ascii_character.that_is_not_alphabetic()".to_string()),
+            ast::ClassAsciiKind::Ascii => Ok("ascii_character.not_any()".to_string()),
+            ast::ClassAsciiKind::Blank => Ok("ascii_character.that_is_not_blank()".to_string()),
+            ast::ClassAsciiKind::Cntrl => Ok("ascii_character.that_is_not_control()".to_string()),
+            ast::ClassAsciiKind::Digit => Ok("ascii_character.that_is_not_digit()".to_string()),
+            ast::ClassAsciiKind::Graph => Ok("ascii_character.that_is_not_graph()".to_string()),
+            ast::ClassAsciiKind::Lower => Ok("ascii_character.that_is_not_lowercase()".to_string()),
+            ast::ClassAsciiKind::Print => Ok("ascii_character.that_is_not_printable()".to_string()),
+            ast::ClassAsciiKind::Punct => Ok("ascii_character.that_is_not_punctuation()".to_string()),
+            ast::ClassAsciiKind::Space => Ok("ascii_character.that_is_not_whitespace()".to_string()),
+            ast::ClassAsciiKind::Upper => Ok("ascii_character.that_is_not_uppercase()".to_string()),
+            ast::ClassAsciiKind::Word => Ok("ascii_character.that_is_not_word()".to_string()),
+            ast::ClassAsciiKind::Xdigit => Ok("ascii_character.that_is_not_hex_digit()".to_string()),
         }
     } else {
         match ascii.kind {
-            ast::ClassAsciiKind::Alnum => Ok("is_alphanumeric_ascii()".to_string()),
-            ast::ClassAsciiKind::Alpha => Ok("is_alphabetic_ascii()".to_string()),
-            ast::ClassAsciiKind::Ascii => Ok("is_ascii()".to_string()),
-            ast::ClassAsciiKind::Blank => Ok("is_blank_ascii()".to_string()),
-            ast::ClassAsciiKind::Cntrl => Ok("is_control_ascii()".to_string()),
-            ast::ClassAsciiKind::Digit => Ok("is_digit_ascii()".to_string()),
-            ast::ClassAsciiKind::Graph => Ok("is_graph_ascii()".to_string()),
-            ast::ClassAsciiKind::Lower => Ok("is_lowercase_ascii()".to_string()),
-            ast::ClassAsciiKind::Print => Ok("is_printable_ascii()".to_string()),
-            ast::ClassAsciiKind::Punct => Ok("is_punctuation_ascii()".to_string()),
-            ast::ClassAsciiKind::Space => Ok("is_whitespace_ascii()".to_string()),
-            ast::ClassAsciiKind::Upper => Ok("is_uppercase_ascii()".to_string()),
-            ast::ClassAsciiKind::Word => Ok("is_word_ascii()".to_string()),
-            ast::ClassAsciiKind::Xdigit => Ok("is_hex_digit_ascii()".to_string()),
+            ast::ClassAsciiKind::Alnum => Ok("ascii_character.that_is_alphanumeric()".to_string()),
+            ast::ClassAsciiKind::Alpha => Ok("ascii_character.that_is_alphabetic()".to_string()),
+            ast::ClassAsciiKind::Ascii => Ok("ascii_character.any()".to_string()),
+            ast::ClassAsciiKind::Blank => Ok("ascii_character.that_is_blank()".to_string()),
+            ast::ClassAsciiKind::Cntrl => Ok("ascii_character.that_is_control()".to_string()),
+            ast::ClassAsciiKind::Digit => Ok("ascii_character.that_is_digit()".to_string()),
+            ast::ClassAsciiKind::Graph => Ok("ascii_character.that_is_graph()".to_string()),
+            ast::ClassAsciiKind::Lower => Ok("ascii_character.that_is_lowercase()".to_string()),
+            ast::ClassAsciiKind::Print => Ok("ascii_character.that_is_printable()".to_string()),
+            ast::ClassAsciiKind::Punct => Ok("ascii_character.that_is_punctuation()".to_string()),
+            ast::ClassAsciiKind::Space => Ok("ascii_character.that_is_whitespace()".to_string()),
+            ast::ClassAsciiKind::Upper => Ok("ascii_character.that_is_uppercase()".to_string()),
+            ast::ClassAsciiKind::Word => Ok("ascii_character.that_is_word()".to_string()),
+            ast::ClassAsciiKind::Xdigit => Ok("ascii_character.that_is_hex_digit()".to_string()),
         }
     }
 }
@@ -327,35 +327,35 @@ fn get_expression_for_class_bracketed(
     class_bracketed: &ast::ClassBracketed,
 ) -> Result<String, String> {
     if class_bracketed.negated {
-        Ok(format!("negated_bracket({})", get_expression_for_class_set(&class_bracketed.kind)?))
+        Ok(format!("negated_group({})", get_expression_for_class_set(&class_bracketed.kind)?))
     } else {
-        Ok(format!("bracket({})", get_expression_for_class_set(&class_bracketed.kind)?))
+        Ok(format!("group({})", get_expression_for_class_set(&class_bracketed.kind)?))
     }
 }
 
 fn get_expression_for_group(group: &ast::Group) -> Result<String, String> {
     match &group.kind {
         ast::GroupKind::CaptureIndex(_) => Ok(format!(
-            "capture_expression_by_index({})",
+            "capture_group.by_index({})",
             &parse_regex_tree_into_expression(&group.ast)?
         )),
         ast::GroupKind::CaptureName { name, starts_with_p } => {
             if *starts_with_p {
                 Ok(format!(
-                    "capture_expression_by_name_with_p(\"{}\", {})",
+                    "capture_group.by_name_with_p_prefix(\"{}\", {})",
                     name.name,
                     &parse_regex_tree_into_expression(&group.ast)?
                 ))
             } else {
                 Ok(format!(
-                    "capture_expression_by_name(\"{}\", {})",
+                    "capture_group.by_name(\"{}\", {})",
                     name.name,
                     &parse_regex_tree_into_expression(&group.ast)?
                 ))
             }
         }
         ast::GroupKind::NonCapturing(flags) => Ok(format!(
-            "non_capturing_expression_with_flags({}, {})",
+            "group_with_flags({}, {})",
             &get_expression_for_flags(&flags)?,
             &parse_regex_tree_into_expression(&group.ast)?
         )),
