@@ -1,5 +1,7 @@
 use regex_syntax::ast::{self, parse::Parser, Ast};
 
+use crate::exp_sanitizer::sanitize_safe_expression;
+
 fn get_expression_for_empty() -> Result<String, String> {
     Ok("empty()".to_string())
 }
@@ -63,7 +65,7 @@ fn get_expression_for_repetition(repetition: &ast::Repetition) -> Result<String,
                     &parse_regex_tree_into_expression(&repetition.ast)?
                 )),
                 ast::RepetitionRange::AtLeast(n) => Ok(format!(
-                    "lazy_repetitions.exactly_n_of({}, {})",
+                    "lazy_repetitions.at_least_n_of({}, {})",
                     n,
                     &parse_regex_tree_into_expression(&repetition.ast)?
                 )),
@@ -79,64 +81,49 @@ fn get_expression_for_repetition(repetition: &ast::Repetition) -> Result<String,
 }
 
 fn get_expression_for_concat(node: &Box<ast::Concat>) -> Result<String, String> {
-    let mut expression = String::new();
-    for ast in &node.asts {
-        expression.push_str(&parse_regex_tree_into_expression(ast)?);
-        expression.push_str(", ");
-    }
     Ok(format!(
         "concatenation_of({})",
-        expression.trim_end_matches(", ").to_string()
+        &node
+            .asts
+            .iter()
+            .map(|ast| parse_regex_tree_into_expression(ast))
+            .collect::<Result<Vec<String>, String>>()?
+            .join(", ")
     ))
 }
 
 fn get_expression_for_alternation(node: &Box<ast::Alternation>) -> Result<String, String> {
-    let mut expression = String::new();
-    for ast in &node.asts {
-        expression.push_str(&parse_regex_tree_into_expression(&ast)?);
-        expression.push_str(", ");
-    }
     Ok(format!(
         "any_of({})",
-        expression.trim_end_matches(", ").to_string()
+        &node
+            .asts
+            .iter()
+            .map(|ast| parse_regex_tree_into_expression(ast))
+            .collect::<Result<Vec<String>, String>>()?
+            .join(", ")
     ))
 }
 
 fn get_expression_for_flags(flags: &ast::Flags) -> Result<String, String> {
-    let mut expression = String::new();
-    for flag in &flags.items {
-        match flag.kind {
-            ast::FlagsItemKind::Negation => {
-                expression.push_str("flag.negate(), ");
-            }
-            ast::FlagsItemKind::Flag(flag) => match flag {
-                ast::Flag::CaseInsensitive => {
-                    expression.push_str("flag.be_case_insensitive(), ");
-                }
-                ast::Flag::MultiLine => {
-                    expression.push_str("flag.enable_multi_line_match(), ");
-                }
-                ast::Flag::DotMatchesNewLine => {
-                    expression.push_str("flag.new_line_becomes_character(), ");
-                }
-                ast::Flag::SwapGreed => {
-                    expression.push_str("flag.swap_greed_modes(), ");
-                }
-                ast::Flag::Unicode => {
-                    expression.push_str("flag.enable_unicode_chars(), ");
-                }
-                ast::Flag::CRLF => {
-                    expression.push_str("flag.enable_crlf(), ");
-                }
-                ast::Flag::IgnoreWhitespace => {
-                    expression.push_str("flag.ignore_whitespace(), ");
-                }
-            },
-        }
-    }
     Ok(format!(
         "flags({})",
-        expression.trim_end_matches(", ").to_string()
+        &flags
+            .items
+            .iter()
+            .map(|flag| match flag.kind {
+                ast::FlagsItemKind::Negation => "flag.negate()".to_string(),
+                ast::FlagsItemKind::Flag(flag) => match flag {
+                    ast::Flag::CaseInsensitive => "flag.be_case_insensitive()".to_string(),
+                    ast::Flag::MultiLine => "flag.enable_multi_line_match()".to_string(),
+                    ast::Flag::DotMatchesNewLine => "flag.new_line_becomes_character()".to_string(),
+                    ast::Flag::SwapGreed => "flag.swap_greed_modes()".to_string(),
+                    ast::Flag::Unicode => "flag.enable_unicode_chars()".to_string(),
+                    ast::Flag::CRLF => "flag.enable_crlf()".to_string(),
+                    ast::Flag::IgnoreWhitespace => "flag.ignore_whitespace()".to_string(),
+                },
+            })
+            .collect::<Vec<String>>()
+            .join(", ")
     ))
 }
 
@@ -152,12 +139,22 @@ fn get_expression_for_assertion(assertion: &ast::Assertion) -> Result<String, St
         ast::AssertionKind::EndText => Ok("assertion.end_of_text()".to_string()),
         ast::AssertionKind::WordBoundary => Ok("assertion.word_boundary()".to_string()),
         ast::AssertionKind::NotWordBoundary => Ok("assertion.not_word_boundary()".to_string()),
-        ast::AssertionKind::WordBoundaryStart => Ok("assertion.start_of_word_boundary()".to_string()),
+        ast::AssertionKind::WordBoundaryStart => {
+            Ok("assertion.start_of_word_boundary()".to_string())
+        }
         ast::AssertionKind::WordBoundaryEnd => Ok("assertion.end_of_word_boundary()".to_string()),
-        ast::AssertionKind::WordBoundaryStartAngle => Ok("assertion.start_angle_of_word_boundary()".to_string()),
-        ast::AssertionKind::WordBoundaryEndAngle => Ok("assertion.end_angle_of_word_boundary()".to_string()),
-        ast::AssertionKind::WordBoundaryStartHalf => Ok("assertion.start_half_of_word_boundary()".to_string()),
-        ast::AssertionKind::WordBoundaryEndHalf => Ok("assertion.end_half_of_word_boundary()".to_string()),
+        ast::AssertionKind::WordBoundaryStartAngle => {
+            Ok("assertion.start_angle_of_word_boundary()".to_string())
+        }
+        ast::AssertionKind::WordBoundaryEndAngle => {
+            Ok("assertion.end_angle_of_word_boundary()".to_string())
+        }
+        ast::AssertionKind::WordBoundaryStartHalf => {
+            Ok("assertion.start_half_of_word_boundary()".to_string())
+        }
+        ast::AssertionKind::WordBoundaryEndHalf => {
+            Ok("assertion.end_half_of_word_boundary()".to_string())
+        }
     }
 }
 
@@ -211,7 +208,9 @@ fn get_expression_for_class_perl(class_perl: &ast::ClassPerl) -> Result<String, 
     if class_perl.negated {
         match &class_perl.kind {
             ast::ClassPerlKind::Digit => Ok("perl_character_descriptor.not_digit()".to_string()),
-            ast::ClassPerlKind::Space => Ok("perl_character_descriptor.not_whitespace()".to_string()),
+            ast::ClassPerlKind::Space => {
+                Ok("perl_character_descriptor.not_whitespace()".to_string())
+            }
             ast::ClassPerlKind::Word => Ok("perl_character_descriptor.not_word()".to_string()),
         }
     } else {
@@ -226,8 +225,12 @@ fn get_expression_for_class_perl(class_perl: &ast::ClassPerl) -> Result<String, 
 fn get_expression_for_ascii(ascii: &ast::ClassAscii) -> Result<String, String> {
     if ascii.negated {
         match ascii.kind {
-            ast::ClassAsciiKind::Alnum => Ok("ascii_character.that_is_not_alphanumeric()".to_string()),
-            ast::ClassAsciiKind::Alpha => Ok("ascii_character.that_is_not_alphabetic()".to_string()),
+            ast::ClassAsciiKind::Alnum => {
+                Ok("ascii_character.that_is_not_alphanumeric()".to_string())
+            }
+            ast::ClassAsciiKind::Alpha => {
+                Ok("ascii_character.that_is_not_alphabetic()".to_string())
+            }
             ast::ClassAsciiKind::Ascii => Ok("ascii_character.not_any()".to_string()),
             ast::ClassAsciiKind::Blank => Ok("ascii_character.that_is_not_blank()".to_string()),
             ast::ClassAsciiKind::Cntrl => Ok("ascii_character.that_is_not_control()".to_string()),
@@ -235,11 +238,17 @@ fn get_expression_for_ascii(ascii: &ast::ClassAscii) -> Result<String, String> {
             ast::ClassAsciiKind::Graph => Ok("ascii_character.that_is_not_graph()".to_string()),
             ast::ClassAsciiKind::Lower => Ok("ascii_character.that_is_not_lowercase()".to_string()),
             ast::ClassAsciiKind::Print => Ok("ascii_character.that_is_not_printable()".to_string()),
-            ast::ClassAsciiKind::Punct => Ok("ascii_character.that_is_not_punctuation()".to_string()),
-            ast::ClassAsciiKind::Space => Ok("ascii_character.that_is_not_whitespace()".to_string()),
+            ast::ClassAsciiKind::Punct => {
+                Ok("ascii_character.that_is_not_punctuation()".to_string())
+            }
+            ast::ClassAsciiKind::Space => {
+                Ok("ascii_character.that_is_not_whitespace()".to_string())
+            }
             ast::ClassAsciiKind::Upper => Ok("ascii_character.that_is_not_uppercase()".to_string()),
             ast::ClassAsciiKind::Word => Ok("ascii_character.that_is_not_word()".to_string()),
-            ast::ClassAsciiKind::Xdigit => Ok("ascii_character.that_is_not_hex_digit()".to_string()),
+            ast::ClassAsciiKind::Xdigit => {
+                Ok("ascii_character.that_is_not_hex_digit()".to_string())
+            }
         }
     } else {
         match ascii.kind {
@@ -261,48 +270,41 @@ fn get_expression_for_ascii(ascii: &ast::ClassAscii) -> Result<String, String> {
     }
 }
 
-fn get_expression_for_class_set_union(class_set_union: &ast::ClassSetUnion) -> Result<String, String> {
-    let mut expression = String::new();
-    for class_set_item in &class_set_union.items {
-        expression.push_str(&get_expression_for_class_set(
-            &ast::ClassSet::Item(class_set_item.clone()),
-        )?);
-        expression.push_str(", ");
-    }
+fn get_expression_for_class_set_union(
+    class_set_union: &ast::ClassSetUnion,
+) -> Result<String, String> {
     Ok(format!(
         "any_of({})",
-        expression.trim_end_matches(", ").to_string()
+        &class_set_union
+            .items
+            .iter()
+            .map(
+                |class_set_item| get_expression_for_class_set(&ast::ClassSet::Item(
+                    class_set_item.clone()
+                ))
+            )
+            .collect::<Result<Vec<String>, String>>()?
+            .join(", ")
     ))
 }
 
 fn get_expression_for_class_set(class_set: &ast::ClassSet) -> Result<String, String> {
     match class_set {
         ast::ClassSet::Item(item) => match item {
-            ast::ClassSetItem::Empty(_) => {
-                Ok("empty_item()".to_string())
-            }
-            ast::ClassSetItem::Literal(literal) => {
-                Ok(get_expression_for_literal(literal)?)
-            }
-            ast::ClassSetItem::Range(range) => {
-                Ok(format!("literals_between('{}', '{}')", range.start.c, range.end.c))
-            }
-            ast::ClassSetItem::Ascii(ascii) => {
-                Ok(get_expression_for_ascii(ascii)?)
-            }
-            ast::ClassSetItem::Unicode(unicode) => {
-                Ok(get_expression_for_class_unicode(unicode)?)
-            }
-            ast::ClassSetItem::Perl(perl) => {
-                Ok(get_expression_for_class_perl(perl)?)
-            }
+            ast::ClassSetItem::Empty(_) => Ok("empty_item()".to_string()),
+            ast::ClassSetItem::Literal(literal) => Ok(get_expression_for_literal(literal)?),
+            ast::ClassSetItem::Range(range) => Ok(format!(
+                "literals_between('{}', '{}')",
+                range.start.c, range.end.c
+            )),
+            ast::ClassSetItem::Ascii(ascii) => Ok(get_expression_for_ascii(ascii)?),
+            ast::ClassSetItem::Unicode(unicode) => Ok(get_expression_for_class_unicode(unicode)?),
+            ast::ClassSetItem::Perl(perl) => Ok(get_expression_for_class_perl(perl)?),
             ast::ClassSetItem::Bracketed(bracketed) => {
                 Ok(get_expression_for_class_bracketed(bracketed)?)
             }
-            ast::ClassSetItem::Union(union) => {
-                Ok(get_expression_for_class_set_union(union)?)
-            }
-        }
+            ast::ClassSetItem::Union(union) => Ok(get_expression_for_class_set_union(union)?),
+        },
         ast::ClassSet::BinaryOp(binary_op) => match binary_op.kind {
             ast::ClassSetBinaryOpKind::Intersection => Ok(format!(
                 "intersection_of({}, {})",
@@ -319,7 +321,7 @@ fn get_expression_for_class_set(class_set: &ast::ClassSet) -> Result<String, Str
                 &get_expression_for_class_set(&binary_op.lhs)?,
                 &get_expression_for_class_set(&binary_op.rhs)?
             )),
-        }
+        },
     }
 }
 
@@ -327,35 +329,44 @@ fn get_expression_for_class_bracketed(
     class_bracketed: &ast::ClassBracketed,
 ) -> Result<String, String> {
     if class_bracketed.negated {
-        Ok(format!("negated_group({})", get_expression_for_class_set(&class_bracketed.kind)?))
+        Ok(format!(
+            "negated_group({})",
+            get_expression_for_class_set(&class_bracketed.kind)?
+        ))
     } else {
-        Ok(format!("group({})", get_expression_for_class_set(&class_bracketed.kind)?))
+        Ok(format!(
+            "group({})",
+            get_expression_for_class_set(&class_bracketed.kind)?
+        ))
     }
 }
 
 fn get_expression_for_group(group: &ast::Group) -> Result<String, String> {
     match &group.kind {
         ast::GroupKind::CaptureIndex(_) => Ok(format!(
-            "capture_group.by_index({})",
+            "group.capture_by_index({})",
             &parse_regex_tree_into_expression(&group.ast)?
         )),
-        ast::GroupKind::CaptureName { name, starts_with_p } => {
+        ast::GroupKind::CaptureName {
+            name,
+            starts_with_p,
+        } => {
             if *starts_with_p {
                 Ok(format!(
-                    "capture_group.by_name_with_p_prefix(\"{}\", {})",
+                    "group.capture_by_name_with_p_prefix(\"{}\", {})",
                     name.name,
                     &parse_regex_tree_into_expression(&group.ast)?
                 ))
             } else {
                 Ok(format!(
-                    "capture_group.by_name(\"{}\", {})",
+                    "group.capture_by_name(\"{}\", {})",
                     name.name,
                     &parse_regex_tree_into_expression(&group.ast)?
                 ))
             }
         }
         ast::GroupKind::NonCapturing(flags) => Ok(format!(
-            "group_with_flags({}, {})",
+            "group.with_flags({}, {})",
             &get_expression_for_flags(&flags)?,
             &parse_regex_tree_into_expression(&group.ast)?
         )),
@@ -389,5 +400,6 @@ fn parse_regex_into_tree(regex: &str) -> Result<Ast, String> {
 
 pub fn parse_regex_into_expression(regex: &str) -> Result<String, String> {
     let ast = parse_regex_into_tree(regex)?;
-    parse_regex_tree_into_expression(&ast)
+    let expression = parse_regex_tree_into_expression(&ast)?;
+    Ok(sanitize_safe_expression(&expression))
 }
