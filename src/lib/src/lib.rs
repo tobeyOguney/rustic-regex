@@ -1,9 +1,10 @@
-pub mod regexp_parser;
+pub mod safe_regexp_parser;
+pub mod unsafe_regexp_parser;
 pub mod exp_optimizer;
 
 #[cfg(test)]
 mod tests {
-    use crate::regexp_parser::parse_regex_into_expression;
+    use crate::safe_regexp_parser::parse_regex_into_expression;
     use crate::exp_optimizer::optimize_expression;
 
     #[test]
