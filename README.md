@@ -1,4 +1,4 @@
-# rustic-regular-expressions
+# rustic-regex
 
 The "VerbalExpression" [syntax](https://github.com/VerbalExpressions/implementation/wiki/List-of-methods-to-implement) is pretty intuitively grasped.
 
