@@ -330,12 +330,12 @@ fn get_expression_for_class_bracketed(
 ) -> Result<String, String> {
     if class_bracketed.negated {
         Ok(format!(
-            "negated_group({})",
+            "group.negated({})",
             get_expression_for_class_set(&class_bracketed.kind)?
         ))
     } else {
         Ok(format!(
-            "group({})",
+            "group.plain({})",
             get_expression_for_class_set(&class_bracketed.kind)?
         ))
     }
